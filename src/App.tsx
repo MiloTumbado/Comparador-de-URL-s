@@ -9,8 +9,8 @@ import { usePageSpeed } from './hooks/usePageSpeed'
 import type { AnalysisMode, Strategy } from './types/pagespeed'
 
 const DEFAULTS: { urlA: string; urlB: string; strategy: Strategy } = {
-  urlA: 'bluecaddy.us',
-  urlB: 'competitor-site.com',
+  urlA: 'https://example.com',
+  urlB: 'https://example.org',
   strategy: 'mobile',
 }
 

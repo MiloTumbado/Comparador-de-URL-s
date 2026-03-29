@@ -77,7 +77,7 @@ export const UrlInput = ({
             type="text"
             value={urlA}
             onChange={(event) => onUrlAChange(event.target.value)}
-            placeholder="https://bluecaddy.us"
+            placeholder="https://example.com"
             className="w-full bg-transparent text-lg font-bold text-stone-800 outline-none placeholder:text-stone-400"
           />
         </label>
@@ -91,7 +91,7 @@ export const UrlInput = ({
               type="text"
               value={urlB}
               onChange={(event) => onUrlBChange(event.target.value)}
-              placeholder="https://competitor-site.com"
+              placeholder="https://example.org"
               className="w-full bg-transparent text-lg font-bold text-stone-800 outline-none placeholder:text-stone-400"
             />
           </label>

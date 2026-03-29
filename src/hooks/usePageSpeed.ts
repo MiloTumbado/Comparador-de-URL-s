@@ -11,7 +11,9 @@ import {
   type Strategy,
 } from '../types/pagespeed'
 
-const API_ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed'
+const API_ENDPOINT = '/api/pagespeed'
+const GENERIC_ANALYSIS_ERROR =
+  'No se pudo completar el analisis de PageSpeed. Intenta nuevamente en unos segundos.'
 
 const VITAL_AUDITS: Record<keyof CoreWebVitals, string> = {
   fcp: 'first-contentful-paint',
@@ -21,9 +23,7 @@ const VITAL_AUDITS: Record<keyof CoreWebVitals, string> = {
 }
 
 interface ApiErrorResponse {
-  error?: {
-    message?: string
-  }
+  error?: string
 }
 
 interface UsePageSpeedState {
@@ -146,12 +146,10 @@ const parseReport = (
 const fetchReport = async (
   url: string,
   strategy: Strategy,
-  apiKey: string,
 ): Promise<PageSpeedReport> => {
   const params = new URLSearchParams({
     url,
     strategy,
-    key: apiKey,
   })
 
   CATEGORY_ORDER.forEach((category) => {
@@ -163,10 +161,11 @@ const fetchReport = async (
   const payload = (await response.json()) as PageSpeedApiResponse | ApiErrorResponse
 
   if (!response.ok) {
-    const apiErrorMessage = (payload as ApiErrorResponse).error?.message
+    const apiErrorMessage = (payload as ApiErrorResponse).error
     throw new Error(
-      apiErrorMessage ??
-        `PageSpeed devolvio un error HTTP ${response.status} para ${url}.`,
+      typeof apiErrorMessage === 'string' && apiErrorMessage.trim().length > 0
+        ? apiErrorMessage
+        : GENERIC_ANALYSIS_ERROR,
     )
   }
 
@@ -181,14 +180,6 @@ export const usePageSpeed = (): UsePageSpeedState => {
 
   const analyzeSingle = useCallback(async (url: string, strategy: Strategy) => {
     setError(null)
-
-    const apiKey = import.meta.env.VITE_PAGESPEED_API_KEY?.trim()
-    if (!apiKey) {
-      setComparisonResult(null)
-      setSingleResult(null)
-      setError('Configura VITE_PAGESPEED_API_KEY en tu archivo .env antes de analizar.')
-      return
-    }
 
     let normalizedUrl = ''
 
@@ -211,17 +202,13 @@ export const usePageSpeed = (): UsePageSpeedState => {
     setIsLoading(true)
 
     try {
-      const report = await fetchReport(normalizedUrl, strategy, apiKey)
+      const report = await fetchReport(normalizedUrl, strategy)
       setSingleResult(report)
       setComparisonResult(null)
-    } catch (analysisError) {
+    } catch {
       setSingleResult(null)
       setComparisonResult(null)
-      setError(
-        analysisError instanceof Error
-          ? analysisError.message
-          : 'No se pudo completar el analisis de PageSpeed.',
-      )
+      setError(GENERIC_ANALYSIS_ERROR)
     } finally {
       setIsLoading(false)
     }
@@ -230,14 +217,6 @@ export const usePageSpeed = (): UsePageSpeedState => {
   const analyzePair = useCallback(
     async (leftUrl: string, rightUrl: string, strategy: Strategy) => {
       setError(null)
-
-      const apiKey = import.meta.env.VITE_PAGESPEED_API_KEY?.trim()
-      if (!apiKey) {
-        setComparisonResult(null)
-        setSingleResult(null)
-        setError('Configura VITE_PAGESPEED_API_KEY en tu archivo .env antes de analizar.')
-        return
-      }
 
       let normalizedLeft = ''
       let normalizedRight = ''
@@ -263,20 +242,16 @@ export const usePageSpeed = (): UsePageSpeedState => {
 
       try {
         const [left, right] = await Promise.all([
-          fetchReport(normalizedLeft, strategy, apiKey),
-          fetchReport(normalizedRight, strategy, apiKey),
+          fetchReport(normalizedLeft, strategy),
+          fetchReport(normalizedRight, strategy),
         ])
 
         setComparisonResult({ left, right })
         setSingleResult(null)
-      } catch (analysisError) {
+      } catch {
         setComparisonResult(null)
         setSingleResult(null)
-        setError(
-          analysisError instanceof Error
-            ? analysisError.message
-            : 'No se pudo completar la comparacion de PageSpeed.',
-        )
+        setError('No se pudo completar la comparacion de PageSpeed. Intenta nuevamente en unos segundos.')
       } finally {
         setIsLoading(false)
       }

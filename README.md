@@ -1,4 +1,4 @@
-# PageSpeed Compare (Frontend Only)
+# PageSpeed Compare
 
 Analizador con dos modos usando Google PageSpeed Insights API.
 
@@ -10,18 +10,18 @@ Stack:
 - React + TypeScript + Vite
 - TailwindCSS
 - Recharts
-- Cero backend
+- Proxy serverless en Vercel (`/api/pagespeed`)
 
-## 1) Configurar API Key
+## 1) Configurar API Key (server-side)
 
 1. Crea una API key en Google Cloud para PageSpeed Insights API.
 2. Copia `.env.example` a `.env` y coloca tu llave:
 
 ```bash
-VITE_PAGESPEED_API_KEY=tu_api_key
+PAGESPEED_API_KEY=tu_api_key
 ```
 
-Nota: al ser frontend-only, la key queda expuesta en cliente. Te conviene restringirla por dominio en Google Cloud.
+Nota: la key se usa en el endpoint server-side y no se expone en el bundle del frontend.
 
 ## 2) Desarrollo local
 
@@ -45,4 +45,4 @@ Con Vercel CLI:
 npx vercel --prod
 ```
 
-Durante el setup en Vercel, agrega la variable de entorno `VITE_PAGESPEED_API_KEY`.
+Durante el setup en Vercel, agrega la variable de entorno `PAGESPEED_API_KEY`.
