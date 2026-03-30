@@ -1,6 +1,189 @@
+import dns from 'node:dns/promises'
+import net from 'node:net'
+
 const GOOGLE_PAGESPEED_ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed'
 const DEFAULT_CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo']
 const VALID_STRATEGIES = new Set(['mobile', 'desktop'])
+const RATE_LIMIT_MAX_REQUESTS = Number.parseInt(process.env.PAGESPEED_RATE_LIMIT_MAX ?? '30', 10)
+const RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.PAGESPEED_RATE_LIMIT_WINDOW_MS ?? '60000', 10)
+
+const RATE_LIMIT_BUCKETS = globalThis.__pagespeedRateLimitBuckets ?? new Map()
+if (!globalThis.__pagespeedRateLimitBuckets) {
+  globalThis.__pagespeedRateLimitBuckets = RATE_LIMIT_BUCKETS
+}
+
+const logServerError = (message) => {
+  const prefix = '[pagespeed-proxy]'
+  console.error(`${prefix} ${message}`)
+}
+
+const normalizeIp = (rawIp) => {
+  if (typeof rawIp !== 'string') {
+    return ''
+  }
+
+  const trimmed = rawIp.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  return trimmed.startsWith('::ffff:') ? trimmed.slice(7) : trimmed
+}
+
+const isPrivateOrReservedIPv4 = (ipAddress) => {
+  const octets = ipAddress.split('.').map((part) => Number.parseInt(part, 10))
+  const [first, second] = octets
+
+  if (first === 10) return true
+  if (first === 127) return true
+  if (first === 0) return true
+  if (first === 169 && second === 254) return true
+  if (first === 172 && second >= 16 && second <= 31) return true
+  if (first === 192 && second === 168) return true
+  if (first === 100 && second >= 64 && second <= 127) return true
+  if (first === 198 && (second === 18 || second === 19)) return true
+  if (first >= 224) return true
+
+  return false
+}
+
+const isPrivateOrReservedIPv6 = (ipAddress) => {
+  const normalized = ipAddress.toLowerCase()
+
+  if (normalized === '::' || normalized === '::1') {
+    return true
+  }
+
+  if (
+    normalized.startsWith('fe8') ||
+    normalized.startsWith('fe9') ||
+    normalized.startsWith('fea') ||
+    normalized.startsWith('feb')
+  ) {
+    return true
+  }
+
+  if (normalized.startsWith('fc') || normalized.startsWith('fd')) {
+    return true
+  }
+
+  if (normalized.startsWith('::ffff:')) {
+    const mappedIPv4 = normalized.slice(7)
+    return net.isIP(mappedIPv4) === 4 && isPrivateOrReservedIPv4(mappedIPv4)
+  }
+
+  return false
+}
+
+const isPrivateOrReservedIp = (value) => {
+  const ipAddress = normalizeIp(value)
+  const ipVersion = net.isIP(ipAddress)
+
+  if (ipVersion === 4) {
+    return isPrivateOrReservedIPv4(ipAddress)
+  }
+
+  if (ipVersion === 6) {
+    return isPrivateOrReservedIPv6(ipAddress)
+  }
+
+  return false
+}
+
+const isForbiddenHostname = (hostname) => {
+  const normalized = hostname.toLowerCase()
+
+  return (
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    normalized.endsWith('.local')
+  )
+}
+
+const assertSafeTargetHostname = async (hostname) => {
+  if (isForbiddenHostname(hostname)) {
+    throw new Error('FORBIDDEN_HOSTNAME')
+  }
+
+  const normalizedHostname = hostname.toLowerCase()
+  const literalIpVersion = net.isIP(normalizedHostname)
+
+  if (literalIpVersion > 0) {
+    if (isPrivateOrReservedIp(normalizedHostname)) {
+      throw new Error('FORBIDDEN_IP_TARGET')
+    }
+    return
+  }
+
+  let lookupResults = []
+
+  try {
+    lookupResults = await dns.lookup(normalizedHostname, {
+      all: true,
+      verbatim: true,
+    })
+  } catch {
+    throw new Error('DNS_LOOKUP_FAILED')
+  }
+
+  if (!lookupResults.length) {
+    throw new Error('DNS_LOOKUP_FAILED')
+  }
+
+  const hasForbiddenResolvedIp = lookupResults.some(({ address }) =>
+    isPrivateOrReservedIp(address),
+  )
+
+  if (hasForbiddenResolvedIp) {
+    throw new Error('FORBIDDEN_RESOLVED_IP')
+  }
+}
+
+const getClientIp = (req) => {
+  const forwardedHeader = req.headers['x-forwarded-for']
+  const firstForwardedIp = Array.isArray(forwardedHeader)
+    ? forwardedHeader[0]
+    : forwardedHeader
+
+  if (typeof firstForwardedIp === 'string' && firstForwardedIp.trim()) {
+    return normalizeIp(firstForwardedIp.split(',')[0])
+  }
+
+  const realIpHeader = req.headers['x-real-ip']
+  if (typeof realIpHeader === 'string' && realIpHeader.trim()) {
+    return normalizeIp(realIpHeader)
+  }
+
+  return normalizeIp(req.socket?.remoteAddress ?? 'unknown') || 'unknown'
+}
+
+const pruneExpiredRateLimitBuckets = (now) => {
+  for (const [ip, bucket] of RATE_LIMIT_BUCKETS) {
+    if (bucket.resetAt <= now) {
+      RATE_LIMIT_BUCKETS.delete(ip)
+    }
+  }
+}
+
+const consumeRateLimit = (ip, now) => {
+  let bucket = RATE_LIMIT_BUCKETS.get(ip)
+
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = {
+      count: 0,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    }
+  }
+
+  bucket.count += 1
+  RATE_LIMIT_BUCKETS.set(ip, bucket)
+
+  return {
+    limited: bucket.count > RATE_LIMIT_MAX_REQUESTS,
+    remaining: Math.max(0, RATE_LIMIT_MAX_REQUESTS - bucket.count),
+    resetAt: bucket.resetAt,
+  }
+}
 
 const getFirstQueryValue = (value) => {
   if (Array.isArray(value)) {
@@ -48,13 +231,31 @@ const sendJson = (res, statusCode, payload) => {
 }
 
 export default async function handler(req, res) {
+  const now = Date.now()
+  pruneExpiredRateLimitBuckets(now)
+
+  const clientIp = getClientIp(req)
+  const rateLimit = consumeRateLimit(clientIp, now)
+  res.setHeader('X-RateLimit-Limit', String(RATE_LIMIT_MAX_REQUESTS))
+  res.setHeader('X-RateLimit-Remaining', String(rateLimit.remaining))
+  res.setHeader('X-RateLimit-Reset', String(Math.ceil(rateLimit.resetAt / 1000)))
+
+  if (rateLimit.limited) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((rateLimit.resetAt - now) / 1000))
+    res.setHeader('Retry-After', String(retryAfterSeconds))
+
+    return sendJson(res, 429, {
+      error: 'Demasiadas solicitudes. Intenta nuevamente en unos segundos.',
+    })
+  }
+
   if (req.method !== 'GET') {
     return sendJson(res, 405, { error: 'Metodo no permitido.' })
   }
 
   const apiKey = process.env.PAGESPEED_API_KEY?.trim()
   if (!apiKey) {
-    console.error('PAGESPEED_API_KEY is not configured in server environment.')
+    logServerError('Missing PAGESPEED_API_KEY in server environment.')
     return sendJson(res, 503, {
       error: 'El servicio de analisis no esta configurado correctamente.',
     })
@@ -85,6 +286,26 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: 'Debes enviar una URL valida.' })
   }
 
+  let parsedTargetUrl
+
+  try {
+    parsedTargetUrl = new URL(normalizedTargetUrl)
+  } catch {
+    return sendJson(res, 400, { error: 'La URL enviada no es valida.' })
+  }
+
+  if (!['http:', 'https:'].includes(parsedTargetUrl.protocol)) {
+    return sendJson(res, 400, { error: 'La URL enviada no es valida.' })
+  }
+
+  try {
+    await assertSafeTargetHostname(parsedTargetUrl.hostname)
+  } catch {
+    return sendJson(res, 400, {
+      error: 'La URL enviada no esta permitida.',
+    })
+  }
+
   const queryParams = new URLSearchParams({
     url: normalizedTargetUrl,
     strategy: strategyParam,
@@ -102,10 +323,7 @@ export default async function handler(req, res) {
     const payload = await response.json()
 
     if (!response.ok) {
-      console.error('Google PageSpeed API error:', {
-        status: response.status,
-        payload,
-      })
+      logServerError('Google PageSpeed API returned non-2xx response.')
 
       return sendJson(res, 502, {
         error: 'No se pudo obtener el reporte de PageSpeed. Intenta nuevamente.',
@@ -113,8 +331,8 @@ export default async function handler(req, res) {
     }
 
     return sendJson(res, 200, payload)
-  } catch (error) {
-    console.error('Unexpected PageSpeed proxy failure:', error)
+  } catch {
+    logServerError('Unexpected failure while requesting Google PageSpeed API.')
     return sendJson(res, 502, {
       error: 'No se pudo conectar con PageSpeed en este momento.',
     })

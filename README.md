@@ -19,6 +19,8 @@ Stack:
 
 ```bash
 PAGESPEED_API_KEY=tu_api_key
+PAGESPEED_RATE_LIMIT_MAX=30
+PAGESPEED_RATE_LIMIT_WINDOW_MS=60000
 ```
 
 Nota: la key se usa en el endpoint server-side y no se expone en el bundle del frontend.
