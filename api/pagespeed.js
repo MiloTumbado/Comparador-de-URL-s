@@ -325,8 +325,13 @@ export default async function handler(req, res) {
     if (!response.ok) {
       logServerError('Google PageSpeed API returned non-2xx response.')
 
+      const upstreamErrorMessage =
+        typeof payload?.error?.message === 'string' && payload.error.message.trim().length > 0
+          ? payload.error.message
+          : null
+
       return sendJson(res, 502, {
-        error: 'Could not retrieve the PageSpeed report. Please try again.',
+        error: upstreamErrorMessage ?? 'Could not retrieve the PageSpeed report. Please try again.',
       })
     }
 

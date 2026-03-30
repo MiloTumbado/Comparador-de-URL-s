@@ -94,11 +94,20 @@ const createPageSpeedDevProxyPlugin = (apiKey: string): Plugin => ({
 
       try {
         const response = await fetch(endpoint)
-        const payload = await response.json()
+        const payload = (await response.json()) as {
+          error?: {
+            message?: string
+          }
+        }
 
         if (!response.ok) {
+          const upstreamErrorMessage =
+            typeof payload?.error?.message === 'string' && payload.error.message.trim().length > 0
+              ? payload.error.message
+              : null
+
           sendJson(res, 502, {
-            error: 'No se pudo obtener el reporte de PageSpeed. Intenta nuevamente.',
+            error: upstreamErrorMessage ?? 'Could not retrieve the PageSpeed report. Please try again.',
           })
           return
         }
@@ -106,7 +115,7 @@ const createPageSpeedDevProxyPlugin = (apiKey: string): Plugin => ({
         sendJson(res, 200, payload)
       } catch {
         sendJson(res, 502, {
-          error: 'No se pudo conectar con PageSpeed en este momento.',
+          error: 'Could not connect to PageSpeed right now.',
         })
       }
     })

@@ -15,6 +15,14 @@ const API_ENDPOINT = '/api/pagespeed'
 const GENERIC_ANALYSIS_ERROR =
   'Could not complete the PageSpeed analysis. Please try again in a few seconds.'
 
+const getErrorMessage = (value: unknown, fallback: string): string => {
+  if (value instanceof Error && value.message.trim().length > 0) {
+    return value.message
+  }
+
+  return fallback
+}
+
 const VITAL_AUDITS: Record<keyof CoreWebVitals, string> = {
   fcp: 'first-contentful-paint',
   lcp: 'largest-contentful-paint',
@@ -205,10 +213,10 @@ export const usePageSpeed = (): UsePageSpeedState => {
       const report = await fetchReport(normalizedUrl, strategy)
       setSingleResult(report)
       setComparisonResult(null)
-    } catch {
+    } catch (caughtError) {
       setSingleResult(null)
       setComparisonResult(null)
-      setError(GENERIC_ANALYSIS_ERROR)
+      setError(getErrorMessage(caughtError, GENERIC_ANALYSIS_ERROR))
     } finally {
       setIsLoading(false)
     }
@@ -248,10 +256,15 @@ export const usePageSpeed = (): UsePageSpeedState => {
 
         setComparisonResult({ left, right })
         setSingleResult(null)
-      } catch {
+      } catch (caughtError) {
         setComparisonResult(null)
         setSingleResult(null)
-        setError('Could not complete the PageSpeed comparison. Please try again in a few seconds.')
+        setError(
+          getErrorMessage(
+            caughtError,
+            'Could not complete the PageSpeed comparison. Please try again in a few seconds.',
+          ),
+        )
       } finally {
         setIsLoading(false)
       }
