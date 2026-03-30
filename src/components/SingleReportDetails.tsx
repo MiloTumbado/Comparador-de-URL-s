@@ -112,8 +112,8 @@ export const SingleReportDetails = ({ report }: SingleReportDetailsProps) => {
             <thead>
               <tr className="border-b border-stone-300 text-xs uppercase tracking-[0.08em] text-stone-500">
                 <th className="px-2 py-2 text-left">Metric</th>
-                <th className="px-2 py-2 text-right">Valor</th>
-                <th className="px-2 py-2 text-right">Estado</th>
+                <th className="px-2 py-2 text-right">Value</th>
+                <th className="px-2 py-2 text-right">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -152,7 +152,7 @@ export const SingleReportDetails = ({ report }: SingleReportDetailsProps) => {
 
         <div className="mt-4 rounded-2xl border border-stone-300/75 bg-gradient-to-br from-white/90 to-stone-100/70 px-4 py-3 shadow-[0_16px_32px_-30px_rgba(36,31,24,0.75)]">
           {report.opportunities.length === 0 ? (
-            <p className="text-sm text-lime-700">Sin issues mayores detectados.</p>
+            <p className="text-sm text-lime-700">No major issues detected.</p>
           ) : (
             <ul className="grid gap-2 text-sm text-stone-700">
               {report.opportunities.map((item) => (

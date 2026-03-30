@@ -18,8 +18,8 @@ interface UrlInputProps {
 const strategies: Strategy[] = ['mobile', 'desktop']
 
 const modes: Array<{ value: AnalysisMode; label: string }> = [
-  { value: 'single', label: 'Normal' },
-  { value: 'compare', label: 'Comparar' },
+  { value: 'single', label: 'Single' },
+  { value: 'compare', label: 'Compare' },
 ]
 
 export const UrlInput = ({
@@ -63,8 +63,8 @@ export const UrlInput = ({
 
         <p className="text-xs font-semibold uppercase tracking-[0.13em] text-stone-500">
           {mode === 'single'
-            ? 'Analiza una URL'
-            : 'Compara URL A vs URL B'}
+            ? 'Analyze one URL'
+            : 'Compare URL A vs URL B'}
         </p>
       </div>
 
@@ -128,10 +128,10 @@ export const UrlInput = ({
           )}
         >
           {disabled
-            ? 'Analizando...'
+            ? 'Analyzing...'
             : mode === 'single'
-              ? 'Analizar pagina'
-              : 'Comparar paginas'}
+              ? 'Analyze page'
+              : 'Compare pages'}
         </button>
       </div>
     </form>

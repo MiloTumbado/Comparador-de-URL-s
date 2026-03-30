@@ -198,7 +198,7 @@ export const MetricsTable = ({ left, right }: MetricsTableProps) => {
               </p>
 
               {report.opportunities.length === 0 ? (
-                <p className="text-sm text-lime-700">Sin issues mayores detectados.</p>
+                <p className="text-sm text-lime-700">No major issues detected.</p>
               ) : (
                 <ul className="grid gap-2 text-sm text-stone-700">
                   {report.opportunities.map((item) => (

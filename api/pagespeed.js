@@ -245,19 +245,19 @@ export default async function handler(req, res) {
     res.setHeader('Retry-After', String(retryAfterSeconds))
 
     return sendJson(res, 429, {
-      error: 'Demasiadas solicitudes. Intenta nuevamente en unos segundos.',
+      error: 'Too many requests. Please try again in a few seconds.',
     })
   }
 
   if (req.method !== 'GET') {
-    return sendJson(res, 405, { error: 'Metodo no permitido.' })
+    return sendJson(res, 405, { error: 'Method not allowed.' })
   }
 
   const apiKey = process.env.PAGESPEED_API_KEY?.trim()
   if (!apiKey) {
     logServerError('Missing PAGESPEED_API_KEY in server environment.')
     return sendJson(res, 503, {
-      error: 'El servicio de analisis no esta configurado correctamente.',
+      error: 'The analysis service is not configured correctly.',
     })
   }
 
@@ -265,12 +265,12 @@ export default async function handler(req, res) {
   const strategyParam = getFirstQueryValue(req.query?.strategy) ?? 'mobile'
 
   if (!targetUrlParam || typeof targetUrlParam !== 'string') {
-    return sendJson(res, 400, { error: 'Debes enviar una URL valida.' })
+    return sendJson(res, 400, { error: 'You must provide a valid URL.' })
   }
 
   if (typeof strategyParam !== 'string' || !VALID_STRATEGIES.has(strategyParam)) {
     return sendJson(res, 400, {
-      error: 'La estrategia debe ser mobile o desktop.',
+      error: 'Strategy must be mobile or desktop.',
     })
   }
 
@@ -279,11 +279,11 @@ export default async function handler(req, res) {
   try {
     normalizedTargetUrl = normalizeUrl(targetUrlParam)
   } catch {
-    return sendJson(res, 400, { error: 'La URL enviada no es valida.' })
+    return sendJson(res, 400, { error: 'The provided URL is not valid.' })
   }
 
   if (!normalizedTargetUrl) {
-    return sendJson(res, 400, { error: 'Debes enviar una URL valida.' })
+    return sendJson(res, 400, { error: 'You must provide a valid URL.' })
   }
 
   let parsedTargetUrl
@@ -291,18 +291,18 @@ export default async function handler(req, res) {
   try {
     parsedTargetUrl = new URL(normalizedTargetUrl)
   } catch {
-    return sendJson(res, 400, { error: 'La URL enviada no es valida.' })
+    return sendJson(res, 400, { error: 'The provided URL is not valid.' })
   }
 
   if (!['http:', 'https:'].includes(parsedTargetUrl.protocol)) {
-    return sendJson(res, 400, { error: 'La URL enviada no es valida.' })
+    return sendJson(res, 400, { error: 'The provided URL is not valid.' })
   }
 
   try {
     await assertSafeTargetHostname(parsedTargetUrl.hostname)
   } catch {
     return sendJson(res, 400, {
-      error: 'La URL enviada no esta permitida.',
+      error: 'The provided URL is not allowed.',
     })
   }
 
@@ -326,7 +326,7 @@ export default async function handler(req, res) {
       logServerError('Google PageSpeed API returned non-2xx response.')
 
       return sendJson(res, 502, {
-        error: 'No se pudo obtener el reporte de PageSpeed. Intenta nuevamente.',
+        error: 'Could not retrieve the PageSpeed report. Please try again.',
       })
     }
 
@@ -334,7 +334,7 @@ export default async function handler(req, res) {
   } catch {
     logServerError('Unexpected failure while requesting Google PageSpeed API.')
     return sendJson(res, 502, {
-      error: 'No se pudo conectar con PageSpeed en este momento.',
+      error: 'Could not connect to PageSpeed right now.',
     })
   }
 }

@@ -56,14 +56,14 @@ export const Summary = ({ left, right }: SummaryProps) => {
   const { leftWins, rightWins } = countWins(left, right)
 
   const winner =
-    leftWins === rightWins ? 'Empate tecnico' : leftWins > rightWins ? leftHost : rightHost
+    leftWins === rightWins ? 'Technical tie' : leftWins > rightWins ? leftHost : rightHost
 
   const averageDiff = Math.abs(left.averageScore - right.averageScore)
 
   const status =
     leftWins === rightWins
-      ? 'Empate en metricas Lighthouse'
-      : `${winner} gana ${Math.max(leftWins, rightWins)} de 4 metricas`
+      ? 'Tie on Lighthouse metrics'
+      : `${winner} wins ${Math.max(leftWins, rightWins)} of 4 metrics`
 
   const chartData = [
     {
@@ -112,7 +112,7 @@ export const Summary = ({ left, right }: SummaryProps) => {
             />
             <Tooltip
               cursor={{ fill: 'rgba(0,0,0,0.03)' }}
-              formatter={(value) => [`${value ?? 0} puntos`, 'Score']}
+              formatter={(value) => [`${value ?? 0} points`, 'Score']}
               contentStyle={{ borderRadius: 12, borderColor: '#d6d3d1', fontSize: 12 }}
             />
             <Bar dataKey="score" radius={[12, 12, 0, 0]}>

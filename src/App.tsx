@@ -49,13 +49,13 @@ function App() {
 
   const pageTitle =
     mode === 'single'
-      ? 'Auditoria premium para una sola URL'
-      : 'Benchmark visual entre dos sitios web'
+      ? 'Premium audit for a single URL'
+      : 'Visual benchmark between two websites'
 
   const pageDescription =
     mode === 'single'
-      ? 'Mide performance real, accesibilidad, SEO y oportunidades tecnicas desde una consola limpia y elegante.'
-      : 'Compara URL A vs URL B en mobile o desktop y detecta al instante quien domina en metricas criticas.'
+      ? 'Measure real performance, accessibility, SEO, and technical opportunities from a clean, elegant dashboard.'
+      : 'Compare URL A vs URL B on mobile or desktop and instantly see which one leads on critical metrics.'
 
   return (
     <main className="relative min-h-screen overflow-x-hidden px-4 pb-14 pt-8 md:px-8 md:pt-10">
@@ -89,7 +89,7 @@ function App() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
                   Coverage
                 </p>
-                <p className="mt-1 text-2xl font-extrabold text-stone-900">4 categorias</p>
+                <p className="mt-1 text-2xl font-extrabold text-stone-900">4 categories</p>
                 <p className="text-xs text-stone-500">Performance, A11y, Best Practices, SEO</p>
               </article>
 
@@ -125,7 +125,7 @@ function App() {
 
         {isLoading && (
           <section className="surface section-fade fade-delay-2 px-5 py-5 text-sm font-medium text-stone-600">
-            <p>Consultando PageSpeed Insights. Esto puede tardar unos segundos...</p>
+            <p>Running PageSpeed Insights. This may take a few seconds...</p>
             <div className="mt-4 grid gap-2">
               <div className="skeleton-line h-3 w-full" />
               <div className="skeleton-line h-3 w-11/12" />
@@ -159,8 +159,8 @@ function App() {
         {showEmpty && (
           <section className="surface section-fade fade-delay-3 px-6 py-10 text-center text-stone-600">
             {mode === 'single'
-              ? 'Ingresa una URL y pulsa Analizar pagina para iniciar el analisis.'
-              : 'Ingresa URL A y URL B, luego pulsa Comparar paginas para iniciar el analisis.'}
+              ? 'Enter a URL and click Analyze page to start the analysis.'
+              : 'Enter URL A and URL B, then click Compare pages to start the analysis.'}
           </section>
         )}
       </div>

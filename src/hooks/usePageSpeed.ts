@@ -13,7 +13,7 @@ import {
 
 const API_ENDPOINT = '/api/pagespeed'
 const GENERIC_ANALYSIS_ERROR =
-  'No se pudo completar el analisis de PageSpeed. Intenta nuevamente en unos segundos.'
+  'Could not complete the PageSpeed analysis. Please try again in a few seconds.'
 
 const VITAL_AUDITS: Record<keyof CoreWebVitals, string> = {
   fcp: 'first-contentful-paint',
@@ -97,7 +97,7 @@ const parseReport = (
   payload: PageSpeedApiResponse,
 ): PageSpeedReport => {
   if (!payload.lighthouseResult) {
-    throw new Error('La respuesta de PageSpeed no incluye resultados de Lighthouse.')
+    throw new Error('The PageSpeed response does not include Lighthouse results.')
   }
 
   const { categories, audits } = payload.lighthouseResult
@@ -188,14 +188,14 @@ export const usePageSpeed = (): UsePageSpeedState => {
     } catch {
       setComparisonResult(null)
       setSingleResult(null)
-      setError('La URL no es valida. Usa un dominio o URL completa.')
+      setError('The URL is not valid. Use a domain or full URL.')
       return
     }
 
     if (!normalizedUrl) {
       setComparisonResult(null)
       setSingleResult(null)
-      setError('Debes ingresar una URL para iniciar el analisis.')
+      setError('You must enter a URL to start the analysis.')
       return
     }
 
@@ -227,14 +227,14 @@ export const usePageSpeed = (): UsePageSpeedState => {
       } catch {
         setComparisonResult(null)
         setSingleResult(null)
-        setError('Una de las URLs no es valida. Usa un dominio o URL completa.')
+        setError('One of the URLs is not valid. Use a domain or full URL.')
         return
       }
 
       if (!normalizedLeft || !normalizedRight) {
         setComparisonResult(null)
         setSingleResult(null)
-        setError('Debes ingresar URL A y URL B para iniciar el analisis.')
+        setError('You must enter URL A and URL B to start the analysis.')
         return
       }
 
@@ -251,7 +251,7 @@ export const usePageSpeed = (): UsePageSpeedState => {
       } catch {
         setComparisonResult(null)
         setSingleResult(null)
-        setError('No se pudo completar la comparacion de PageSpeed. Intenta nuevamente en unos segundos.')
+        setError('Could not complete the PageSpeed comparison. Please try again in a few seconds.')
       } finally {
         setIsLoading(false)
       }
